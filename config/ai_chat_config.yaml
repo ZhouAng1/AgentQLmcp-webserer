@@ -1,0 +1,64 @@
+# AI Chat Configuration
+ai_models:
+  gpt-3.5-turbo:
+    enabled: true
+    api_key_env: OPENAI_API_KEY
+    max_tokens: 1000
+    temperature: 0.7
+    timeout: 30
+    
+  claude:
+    enabled: true
+    api_key_env: ANTHROPIC_API_KEY
+    max_tokens: 1000
+    temperature: 0.7
+    timeout: 30
+    
+  deepseek:
+    enabled: true
+    api_key_env: DEEPSEEK_API_KEY
+    max_tokens: 1000
+    temperature: 0.7
+    timeout: 30
+
+# AgentQL MCP Integration
+agentql:
+  enabled: true
+  # Uses official npm package: agentql-mcp
+  # Installation: npm install -g agentql-mcp
+  # GitHub: https://github.com/tinyfish-io/agentql-mcp.git
+  api_key_env: "AGENTQL_API_KEY"
+  timeout: 60
+  features:
+    extract_web_data: true
+    real_time_data: true
+    structured_extraction: true
+  topics:
+    weather: true
+    stock_prices: true
+    news: true
+    crypto: true
+    sports: true
+  sources:
+    weather: "https://www.weather.com"
+    stocks: "https://finance.yahoo.com"
+    crypto: "https://coinmarketcap.com"
+    news: "https://www.google.com"
+
+session:
+  timeout_hours: 24
+  cleanup_days: 7
+  max_messages_per_session: 100
+  db_path: "chat_sessions.db"
+
+security:
+  rate_limit_per_minute: 10
+  max_message_length: 1000
+  allowed_models: ["gpt-3.5-turbo", "claude", "deepseek"]
+  enable_cors: true
+
+logging:
+  level: "INFO"
+  file: "ai_chat.log"
+  max_size_mb: 10
+  backup_count: 5 

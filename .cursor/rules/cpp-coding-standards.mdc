@@ -1,0 +1,367 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# C++ 编码规范和最佳实践
+
+## 代码风格指南
+
+### 命名约定
+
+#### 类和结构体
+```cpp
+// 使用 PascalCase (每个单词首字母大写)
+class DataProcessor;
+class SDTPServerHandler;
+struct ConfigInfo;
+```
+
+#### 函数和方法
+```cpp
+// 使用 PascalCase
+virtual int Initialize();
+virtual void OnReceive(const void* data);
+int ProcessData(void* input);
+```
+
+#### 变量和成员
+```cpp
+// 成员变量使用小写加下划线
+class MyClass {
+private:
+    int data_len_;
+    char* buffer_ptr_;
+    bool is_running_;
+};
+
+// 局部变量使用小写加下划线
+int queue_size = 100;
+const char* server_ip = "127.0.0.1";
+```
+
+#### 常量和宏
+```cpp
+// 常量使用全大写加下划线
+const int MAX_BUFFER_SIZE = 4096;
+const char* DEFAULT_CONFIG_FILE = "config.xml";
+
+// 宏定义使用全大写
+#define THREAD_FUN unsigned int
+#define LOG_ERROR(msg) fprintf(stderr, "ERROR: %s\n", msg)
+```
+
+### 文件组织
+
+#### 头文件结构
+```cpp
+#ifndef INCLUDE_MODULE_NAME_H_
+#define INCLUDE_MODULE_NAME_H_
+
+// 系统头文件
+#include <iostream>
+#include <string>
+
+// 第三方库头文件
+#include "tinyxml2.h"
+
+// 项目头文件
+#include "baseutils.h"
+
+// 类声明
+class MyClass {
+public:
+    MyClass();
+    virtual ~MyClass();
+    
+    // 公开接口
+    virtual int Initialize();
+    virtual int Process(void* data);
+    
+private:
+    // 私有成员
+    int member_var_;
+};
+
+#endif  // INCLUDE_MODULE_NAME_H_
+```
+
+#### 源文件结构
+```cpp
+// 对应的头文件首先包含
+#include "my_class.h"
+
+// 其他必要的头文件
+#include "other_headers.h"
+
+// 构造函数
+MyClass::MyClass() : member_var_(0) {
+    // 初始化代码
+}
+
+// 析构函数
+MyClass::~MyClass() {
+    // 清理代码
+}
+
+// 方法实现
+int MyClass::Initialize() {
+    // 实现代码
+    return 0;
+}
+```
+
+## 项目特定约定
+
+### 基类设计模式
+项目中广泛使用继承和虚函数：
+
+```cpp
+// 基类示例 - 参考 baseutils.h
+class BaseHandler {
+public:
+    virtual ~BaseHandler() {}
+    virtual int Initialize() = 0;
+    virtual int Process(void* data) = 0;
+    virtual int Finalize() { return 0; }
+};
+
+// 派生类实现
+class MyHandler : public BaseHandler {
+public:
+    virtual int Initialize() override;
+    virtual int Process(void* data) override;
+};
+```
+
+### 错误处理模式
+```cpp
+// 使用返回值表示成功/失败
+int MyFunction() {
+    if (some_condition) {
+        return -1;  // 失败
+    }
+    return 0;  // 成功
+}
+
+// 调用示例
+if (MyFunction() != 0) {
+    // 错误处理
+    LOG_ERROR("Function failed");
+    return -1;
+}
+```
+
+### 资源管理模式
+```cpp
+// RAII 模式 - 构造函数获取资源，析构函数释放资源
+class ResourceManager {
+public:
+    ResourceManager() {
+        buffer_ = new char[BUFFER_SIZE];
+    }
+    
+    ~ResourceManager() {
+        delete[] buffer_;
+        buffer_ = nullptr;
+    }
+    
+private:
+    char* buffer_;
+    static const int BUFFER_SIZE = 4096;
+};
+```
+
+## 多线程编程规范
+
+### 线程类设计
+参考 [include/baseutils.h](mdc:include/baseutils.h) 中的线程基类：
+
+```cpp
+class WorkerThread : public Thread {
+public:
+    WorkerThread() : is_running_(false) {}
+    
+    virtual THREAD_FUN main() override {
+        is_running_ = true;
+        while (is_running_) {
+            // 线程工作逻辑
+            DoWork();
+            os::sleep(10);  // 避免占用过多 CPU
+        }
+        return 0;
+    }
+    
+    void stop() {
+        is_running_ = false;
+    }
+    
+private:
+    volatile bool is_running_;
+    
+    void DoWork() {
+        // 具体工作逻辑
+    }
+};
+```
+
+### 同步机制
+```cpp
+// 使用互斥锁保护共享资源
+class ThreadSafeQueue {
+private:
+    std::queue<Item> queue_;
+    Mutex mutex_;
+    
+public:
+    void Push(const Item& item) {
+        AutoLock lock(mutex_);  // RAII 自动锁
+        queue_.push(item);
+    }
+    
+    bool Pop(Item& item) {
+        AutoLock lock(mutex_);
+        if (queue_.empty()) {
+            return false;
+        }
+        item = queue_.front();
+        queue_.pop();
+        return true;
+    }
+};
+```
+
+## 网络编程规范
+
+### 套接字封装
+参考 communicate 模块的实现模式：
+
+```cpp
+class NetworkClient {
+public:
+    NetworkClient() : socket_fd_(-1), is_connected_(false) {}
+    
+    virtual ~NetworkClient() {
+        Close();
+    }
+    
+    bool Connect(const char* ip, int port) {
+        // 连接实现
+        if (connection_successful) {
+            is_connected_ = true;
+            return true;
+        }
+        return false;
+    }
+    
+    void Close() {
+        if (is_connected_) {
+            // 关闭连接
+            is_connected_ = false;
+        }
+    }
+    
+    virtual void OnReceive(const void* data, int len) = 0;
+    virtual void OnDisconnect() = 0;
+    
+private:
+    int socket_fd_;
+    bool is_connected_;
+};
+```
+
+## 性能优化指导
+
+### 内存管理
+```cpp
+// 使用对象池避免频繁分配/释放
+class ObjectPool {
+public:
+    Object* Get() {
+        if (!free_objects_.empty()) {
+            Object* obj = free_objects_.front();
+            free_objects_.pop();
+            return obj;
+        }
+        return new Object();
+    }
+    
+    void Return(Object* obj) {
+        obj->Reset();  // 重置对象状态
+        free_objects_.push(obj);
+    }
+    
+private:
+    std::queue<Object*> free_objects_;
+};
+```
+
+### 数据拷贝优化
+```cpp
+// 避免不必要的数据拷贝
+class DataBuffer {
+public:
+    // 返回引用而不是拷贝
+    const std::string& GetData() const { return data_; }
+    
+    // 移动语义减少拷贝
+    void SetData(std::string&& data) {
+        data_ = std::move(data);
+    }
+    
+private:
+    std::string data_;
+};
+```
+
+## 代码质量要求
+
+### 注释规范
+```cpp
+/**
+ * @brief 处理数据的核心函数
+ * @param data 输入数据指针
+ * @param len 数据长度
+ * @return 0表示成功，负数表示错误码
+ */
+int ProcessData(const void* data, int len);
+
+// 单行注释说明复杂逻辑
+if (complex_condition) {
+    // 这里处理特殊情况的原因是...
+    HandleSpecialCase();
+}
+```
+
+### 断言和检查
+```cpp
+#include <cassert>
+
+int SafeFunction(void* ptr, int size) {
+    assert(ptr != nullptr);  // 调试时检查
+    assert(size > 0);
+    
+    if (ptr == nullptr || size <= 0) {
+        return -1;  // 发布版本的检查
+    }
+    
+    // 正常处理逻辑
+    return 0;
+}
+```
+
+### 日志记录
+```cpp
+// 使用统一的日志接口
+void ProcessMessage(const Message& msg) {
+    LOG_INFO("开始处理消息，类型: %d", msg.type);
+    
+    try {
+        DoProcess(msg);
+        LOG_INFO("消息处理完成");
+    } catch (const std::exception& e) {
+        LOG_ERROR("处理消息时发生错误: %s", e.what());
+    }
+}
+```
+

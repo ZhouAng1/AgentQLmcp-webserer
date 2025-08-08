@@ -1,0 +1,78 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# MYPLAT 项目架构指南
+
+## 项目概述
+MYPLAT 是一个企业级 C++ 电信通信平台，采用模块化架构设计。项目主要构建文件是 [CMakeLists.txt](mdc:CMakeLists.txt)，使用 CMake 3.10+ 和 C++11 标准。
+
+## 核心组件架构
+
+### 1. Pipeline - 高性能数据流水线框架 🏭
+- **位置**: [src/pipeline/](mdc:src/pipeline)  
+- **文档**: [src/pipeline_README.md](mdc:src/pipeline_README.md)
+- **架构**: Workshop-Stage-Handler 三层架构
+- **功能**: 多线程并行处理、内存池管理、队列系统、实时监控
+- **头文件**: [include/pipeline.h](mdc:include/pipeline.h)
+
+### 2. Communicate - 多协议网络通信库 📡  
+- **位置**: [src/communicate/](mdc:src/communicate)
+- **文档**: [src/communicate_README.md](mdc:src/communicate_README.md)  
+- **协议**: SDTP、ZTP、TTP、HTTP
+- **功能**: 数据压缩、加密认证、版本协商
+- **头文件**: [include/communicate.h](mdc:include/communicate.h)
+
+### 3. BaseUtils - 基础工具库 🔧
+- **位置**: [src/baseutils/](mdc:src/baseutils)
+- **文档**: [src/baseutils_README.md](mdc:src/baseutils_README.md)
+- **功能**: 跨平台系统接口、网络通信、多线程、内存管理
+- **头文件**: [include/baseutils.h](mdc:include/baseutils.h)
+
+### 4. AppBuilder - 应用构建器 🏗️
+- **位置**: [src/appbuilder/](mdc:src/appbuilder)
+- **头文件**: [include/appbuilder.h](mdc:include/appbuilder.h)
+- **功能**: 应用程序构建和组装框架
+
+### 5. Front - 前端组件 🖥️
+- **位置**: [src/front/](mdc:src/front)
+- **功能**: 前端界面和可视化组件
+
+### 6. Tool - 工具模块 🛠️
+- **位置**: [src/tool/](mdc:src/tool)
+- **功能**: 各种实用工具和辅助功能
+
+## 目录结构说明
+
+```
+MYPLAT/
+├── src/                    # 主要源代码
+│   ├── pipeline/          # 流水线处理框架
+│   ├── communicate/       # 网络通信库  
+│   ├── baseutils/         # 基础工具库
+│   ├── appbuilder/        # 应用构建器
+│   ├── front/             # 前端组件
+│   └── tool/              # 工具模块
+├── include/               # 头文件目录
+├── src_service/           # 服务相关代码和示例
+├── tests/                 # 测试代码
+├── 3rdpart/              # 第三方库
+├── build/                # 构建输出目录
+└── CMakeLists.txt        # 根构建配置
+```
+
+## 构建系统
+项目使用 CMake 构建系统，支持：
+- **最低版本**: CMake 3.10+
+- **编译器**: C++11 兼容
+- **测试框架**: Google Test
+- **快速构建**: 使用 [easybuild.sh](mdc:easybuild.sh)
+
+## 开发指南
+1. 新功能开发优先考虑在对应的核心模块中实现
+2. 跨模块功能放在 baseutils 中
+3. 协议相关功能在 communicate 中扩展
+4. 数据处理流程使用 pipeline 框架
+5. 参考各模块的详细 README 文档了解具体 API
+

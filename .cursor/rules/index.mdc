@@ -1,0 +1,85 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# MYPLAT 项目 Cursor Rules 索引
+
+欢迎使用 MYPLAT 项目的 Cursor Rules！这些规则将帮助 AI 更好地理解和导航这个复杂的 C++ 电信通信平台。
+
+## 📋 规则文件导航
+
+### 🏗️ [项目架构指南](mdc:.cursor/rules/project-architecture.mdc)
+- 项目整体结构和核心组件概述
+- 各模块职责和相互关系
+- 目录结构说明
+- 开发指南和模块选择建议
+
+### 🏭 [Pipeline 框架指南](mdc:.cursor/rules/pipeline-framework.mdc)  
+- Workshop-Stage-Handler 三层架构详解
+- 核心组件使用方法（线程管理、队列系统、内存管理）
+- 开发模式和性能优化要点
+- 监控和调试技巧
+
+### 📡 [通信协议指南](mdc:.cursor/rules/communication-protocols.mdc)
+- SDTP、ZTP、TTP、HTTP 协议详解
+- 各协议的使用场景和实现方式
+- 数据压缩、安全认证、版本协商
+- 开发最佳实践和性能优化
+
+### 🔨 [构建和开发指南](mdc:.cursor/rules/build-and-development.mdc)
+- CMake 构建系统配置和使用
+- 跨平台开发环境设置
+- 第三方依赖管理
+- 测试系统和开发工作流
+
+### 📝 [C++ 编码规范](mdc:.cursor/rules/cpp-coding-standards.mdc)
+- 命名约定和代码风格
+- 项目特定的设计模式
+- 多线程和网络编程规范
+- 性能优化和代码质量要求
+
+## 🎯 快速入门建议
+
+### 新开发者
+1. 先阅读 [项目架构指南](mdc:.cursor/rules/project-architecture.mdc) 了解整体结构
+2. 根据需要开发的功能类型，重点阅读对应的专项指南
+3. 参考 [C++ 编码规范](mdc:.cursor/rules/cpp-coding-standards.mdc) 确保代码质量
+
+### 特定任务导航
+- **数据处理开发** → [Pipeline 框架指南](mdc:.cursor/rules/pipeline-framework.mdc)
+- **网络通信开发** → [通信协议指南](mdc:.cursor/rules/communication-protocols.mdc)  
+- **项目构建问题** → [构建和开发指南](mdc:.cursor/rules/build-and-development.mdc)
+- **代码规范问题** → [C++ 编码规范](mdc:.cursor/rules/cpp-coding-standards.mdc)
+
+## 📂 关键文件快速链接
+
+### 核心构建文件
+- [CMakeLists.txt](mdc:CMakeLists.txt) - 根构建配置
+- [easybuild.sh](mdc:easybuild.sh) - 快速构建脚本
+
+### 主要文档
+- [src/pipeline_README.md](mdc:src/pipeline_README.md) - Pipeline 详细文档
+- [src/communicate_README.md](mdc:src/communicate_README.md) - 通信库详细文档  
+- [src/baseutils_README.md](mdc:src/baseutils_README.md) - 基础工具库文档
+
+### 关键头文件
+- [include/pipeline.h](mdc:include/pipeline.h) - Pipeline 接口
+- [include/communicate.h](mdc:include/communicate.h) - 通信接口
+- [include/baseutils.h](mdc:include/baseutils.h) - 基础工具接口
+
+### 示例代码
+- [src_service/sdtp_server.cpp](mdc:src_service/sdtp_server.cpp) - SDTP 服务器示例
+- [src_service/sdtp_client.cpp](mdc:src_service/sdtp_client.cpp) - SDTP 客户端示例
+
+## 💡 使用提示
+
+这些规则旨在帮助 AI 助手：
+1. **快速理解**项目结构和架构
+2. **准确定位**相关代码和文档  
+3. **遵循约定**进行代码开发和修改
+4. **解决问题**时找到正确的参考资料
+
+如果需要了解特定模块的详细信息，建议先查看对应的 README 文档，然后参考相关的规则指南。
+
+

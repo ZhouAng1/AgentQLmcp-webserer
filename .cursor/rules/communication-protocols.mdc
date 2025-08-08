@@ -1,0 +1,136 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 通信协议开发指南
+
+## 协议库概述
+Communicate 模块提供多协议网络通信支持，详细文档见 [src/communicate_README.md](mdc:src/communicate_README.md)。
+
+## 支持的协议
+
+### 1. SDTP (Signaling Data Transfer Protocol) 📡
+**用途**: 电信行业信令数据传输协议
+
+**服务器端实现**:
+- **核心文件**: [src/communicate/SDTPServer.cpp](mdc:src/communicate/SDTPServer.cpp)
+- **适配器**: [src/communicate/SDTPSvrAdapter.cpp](mdc:src/communicate/SDTPSvrAdapter.cpp)
+
+**客户端实现**:
+- **基础客户端**: [src/communicate/SDTPClient.cpp](mdc:src/communicate/SDTPClient.cpp)
+- **多客户端**: [src/communicate/SDTPMultiClient.cpp](mdc:src/communicate/SDTPMultiClient.cpp)
+
+**支持版本**:
+- v0816: [src/communicate/SDTPServerHandler_0816.cpp](mdc:src/communicate/SDTPServerHandler_0816.cpp)
+- v1224: [src/communicate/SDTPServerHandler_1224.cpp](mdc:src/communicate/SDTPServerHandler_1224.cpp)
+- v2: [src/communicate/SDTPServerHandler_v2.cpp](mdc:src/communicate/SDTPServerHandler_v2.cpp)
+- v4: [src/communicate/SDTPServerHandler_v4.cpp](mdc:src/communicate/SDTPServerHandler_v4.cpp)
+- v5: [src/communicate/SDTPServerHandler_v5.cpp](mdc:src/communicate/SDTPServerHandler_v5.cpp)
+- dx: [src/communicate/SDTPServerHandler_dx.cpp](mdc:src/communicate/SDTPServerHandler_dx.cpp)
+- dx2: [src/communicate/SDTPServerHandler_dx2.cpp](mdc:src/communicate/SDTPServerHandler_dx2.cpp)
+
+### 2. ZTP (Z Transfer Protocol) 🔄
+**用途**: 自定义高效数据传输协议
+- **服务器**: [src/communicate/ZTPServer.cpp](mdc:src/communicate/ZTPServer.cpp)
+- **客户端**: [src/communicate/ZTPClient.cpp](mdc:src/communicate/ZTPClient.cpp)
+
+### 3. TTP (T Transfer Protocol) ⚡
+**用途**: 轻量级快速传输协议
+- **服务器**: [src/communicate/TTPServer.cpp](mdc:src/communicate/TTPServer.cpp)
+- **客户端**: [src/communicate/TTPClient.cpp](mdc:src/communicate/TTPClient.cpp)
+
+### 4. HTTP/HTTPS 🌐
+**用途**: 标准 Web 协议支持
+- **服务器**: [src/communicate/HttpServer.cpp](mdc:src/communicate/HttpServer.cpp)
+- **客户端**: [src/communicate/HttpClient.cpp](mdc:src/communicate/HttpClient.cpp)
+
+## 协议使用模式
+
+### SDTP 服务器示例
+```cpp
+class MySDTPHandler : public SDTPHandler {
+public:
+    virtual void OnReceive(const void* data, SDTP_DATA_INFO* info) override {
+        // 处理接收到的信令数据
+        printf("接收数据类型: %d, 长度: %d\n", info->type, info->data_len);
+    }
+    
+    virtual void OnConnect(SDTPService* service, const char* ip, int port) override {
+        printf("客户端连接: %s:%d\n", ip, port);
+    }
+};
+
+MySDTPHandler handler;
+SDTPServer server(&handler, 9999);
+server.Start();
+```
+
+### SDTP 客户端示例
+```cpp
+class MySDTPClient : public SDTPClient {
+public:
+    virtual void OnReceive(const void* data, SDTP_DATA_INFO* info) override {
+        // 处理服务器响应
+    }
+};
+
+MySDTPClient client;
+if (client.Connect("192.168.1.100", 9999)) {
+    client.SendData(data, len, DATA_TYPE_NORMAL);
+}
+```
+
+## 核心功能特性
+
+### 数据压缩支持
+- **LZO**: 高速压缩算法
+- **GZIP**: 标准压缩格式
+- **DEFLATE**: 通用压缩算法
+- **7Z**: 高压缩比算法
+- **LZ4**: 超高速压缩算法
+
+### 安全认证
+- 用户名/密码认证
+- Token 认证机制
+- 权限管理系统
+- 加密传输支持
+
+### 版本协商
+- 自动版本检测
+- 向后兼容性
+- 协议升级机制
+- 功能特性协商
+
+## 开发最佳实践
+
+### 1. 协议选择指南
+- **SDTP**: 电信信令处理、需要版本兼容
+- **ZTP**: 高性能数据传输、自定义协议
+- **TTP**: 轻量级应用、快速响应
+- **HTTP**: Web 接口、标准协议交互
+
+### 2. 性能优化
+- 选择合适的压缩算法
+- 配置适当的缓冲区大小  
+- 使用连接池减少连接开销
+- 启用数据批处理模式
+
+### 3. 错误处理
+- 实现自动重连机制
+- 添加超时处理逻辑
+- 记录详细的错误日志
+- 提供故障恢复能力
+
+### 4. 监控和调试
+- 启用网络统计功能
+- 监控连接状态变化
+- 记录协议交互日志
+- 分析传输性能指标
+
+## 配置文件
+协议相关配置通常位于:
+- [src/front/bin/config/](mdc:src/front/bin/config)
+- 支持 XML 配置格式
+- 可动态热加载配置
+

@@ -1,0 +1,5 @@
+requests>=2.25.1
+sqlite3
+uuid
+typing
+pyyaml>=5.4.1 
