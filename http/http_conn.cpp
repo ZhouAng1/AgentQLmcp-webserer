@@ -489,10 +489,20 @@ http_conn::HTTP_CODE http_conn::do_request()
             int status;
             waitpid(pid, &status, 0);
             
-            // 返回CGI输出
-            m_file_address = (char *)malloc(cgi_output.length() + 1);
-            strcpy(m_file_address, cgi_output.c_str());
-            m_file_stat.st_size = cgi_output.length();
+            // 解析CGI输出，提取JSON部分
+            size_t json_start = cgi_output.find("\n\n");
+            if (json_start != std::string::npos) {
+                json_start += 2; // 跳过两个换行符
+                std::string json_content = cgi_output.substr(json_start);
+                m_file_address = (char *)malloc(json_content.length() + 1);
+                strcpy(m_file_address, json_content.c_str());
+                m_file_stat.st_size = json_content.length();
+            } else {
+                // 如果没有找到分隔符，使用完整输出
+                m_file_address = (char *)malloc(cgi_output.length() + 1);
+                strcpy(m_file_address, cgi_output.c_str());
+                m_file_stat.st_size = cgi_output.length();
+            }
             
             return FILE_REQUEST;
         }
