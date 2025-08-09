@@ -448,7 +448,7 @@ http_conn::HTTP_CODE http_conn::do_request()
                 int temp_pipe[2];
                 if (pipe(temp_pipe) == 0)
                 {
-                    write(temp_pipe[1], m_string, m_content_length);
+                    ::write(temp_pipe[1], m_string, m_content_length);
                     close(temp_pipe[1]);
                     dup2(temp_pipe[0], STDIN_FILENO);
                     close(temp_pipe[0]);
