@@ -398,14 +398,17 @@ http_conn::HTTP_CODE http_conn::do_request()
     // 处理CGI请求
     if (strncmp(m_url, "/cgi/", 5) == 0)
     {
+        printf("DEBUG: CGI request detected: %s\n", m_url);
         // 构建CGI脚本路径
         char cgi_path[FILENAME_LEN];
         strcpy(cgi_path, doc_root);
         strcat(cgi_path, m_url);
+        printf("DEBUG: CGI path: %s\n", cgi_path);
         
         // 检查CGI脚本是否存在
         if (access(cgi_path, F_OK) == -1)
         {
+            printf("DEBUG: CGI script not found: %s\n", cgi_path);
             return NO_RESOURCE;
         }
         
