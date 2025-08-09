@@ -4,7 +4,7 @@ int main(int argc, char *argv[])
 {
     //需要修改的数据库信息,登录名,密码,库名
     string user = "root";
-    string passwd = "";  // 使用无密码连接
+    string passwd = "root";  // 使用root密码连接
     string databasename = "qgydb";
 
     //命令行解析
