@@ -28,8 +28,6 @@ class DeepSeekClient:
         self.base_url = "https://api.deepseek.com/v1/chat/completions"
         
         logger.info(f"DeepSeek API Key: {'SET' if self.api_key else 'NOT_SET'}")
-        if self.api_key:
-            logger.info(f"API Key prefix: {self.api_key[:10]}...")
         
     def chat(self, message: str, conversation_history: List[Dict] = []) -> Dict:
         if not self.api_key:
@@ -191,13 +189,11 @@ def main():
             request_data = {}
             logger.warning("No POST data received")
         
-        # 获取用户消息和模型选择
+        # 获取用户消息
         user_message = request_data.get('message', '')
-        model_name = request_data.get('model', 'deepseek')
         session_id = request_data.get('session_id', None)
         
         logger.info(f"User message: {user_message}")
-        logger.info(f"Model: {model_name}")
         logger.info(f"Session ID: {session_id}")
         
         if not user_message:
@@ -231,7 +227,7 @@ def main():
                 "success": result["success"],
                 "response": result.get("response", "Sorry, I couldn't process your request."),
                 "usage": result.get("usage", {}),
-                "model": result.get("model", model_name),
+                "model": "deepseek",
                 "session_id": session_id
             }
         else:
