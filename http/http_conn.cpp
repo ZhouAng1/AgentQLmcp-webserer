@@ -457,7 +457,7 @@ http_conn::HTTP_CODE http_conn::do_request()
             
             // 设置环境变量
             setenv("CONTENT_LENGTH", content_length_str, 1);
-            setenv("REQUEST_METHOD", "POST", 1);
+            setenv("REQUEST_METHOD", m_method == POST ? "POST" : "GET", 1);
             setenv("QUERY_STRING", "", 1);
             setenv("SCRIPT_NAME", m_url, 1);
             setenv("PATH_INFO", m_url, 1);
