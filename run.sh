@@ -6,8 +6,23 @@ echo "===================="
 # 设置API密钥
 export DEEPSEEK_API_KEY="sk-7d3a5f1e93184ef8a00ab4e8c6fa6677"
 
+# 安装Python依赖
+echo "🐍 安装Python依赖..."
+pip3 install -r cgi/requirements.txt 2>/dev/null || {
+    echo "⚠️  Python依赖安装失败，尝试使用pip..."
+    pip install -r cgi/requirements.txt 2>/dev/null || {
+        echo "⚠️  Python依赖安装失败，继续启动..."
+    }
+}
+
 # 设置权限
 chmod +x cgi/*.py
+
+# 初始化数据库
+echo "🗄️  初始化数据库..."
+mysql -u root -proot < init_db.sql 2>/dev/null || {
+    echo "⚠️  数据库初始化失败，继续启动..."
+}
 
 # 清理（忽略错误）
 echo "🧹 清理旧文件..."
