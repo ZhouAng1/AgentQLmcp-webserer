@@ -3,8 +3,8 @@
 echo "🚀 启动 AI 聊天服务器"
 echo "===================="
 
-# 设置API密钥
-export DEEPSEEK_API_KEY="sk-7d3a5f1e93184ef8a00ab4e8c6fa6677"
+# 设置API密钥（请替换为你的DeepSeek API密钥）
+export DEEPSEEK_API_KEY="your_deepseek_api_key_here"
 
 # 安装Python依赖
 echo "🐍 安装Python依赖..."

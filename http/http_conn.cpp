@@ -464,7 +464,7 @@ http_conn::HTTP_CODE http_conn::do_request()
             setenv("QUERY_STRING", "", 1);
             setenv("SCRIPT_NAME", m_url, 1);
             setenv("PATH_INFO", m_url, 1);
-            setenv("DEEPSEEK_API_KEY", "sk-7d3a5f1e93184ef8a00ab4e8c6fa6677", 1);
+            setenv("DEEPSEEK_API_KEY", getenv("DEEPSEEK_API_KEY") ? getenv("DEEPSEEK_API_KEY") : "", 1);
             
             // 执行CGI脚本
             execl(cgi_path, cgi_path, NULL);
