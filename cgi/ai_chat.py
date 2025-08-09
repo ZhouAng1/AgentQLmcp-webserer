@@ -8,168 +8,26 @@ import sys
 import sqlite3
 import uuid
 import time
-import yaml
 import logging
 from typing import Dict, List, Optional
 
-# Import AgentQL integration
-try:
-    from agentql_final_integration import EnhancedAIChat
-    AGENTQL_AVAILABLE = True
-except ImportError:
-    AGENTQL_AVAILABLE = False
-    logging.warning("AgentQL integration not available")
+# 设置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-class MCPClient:
+class DeepSeekClient:
     def __init__(self):
-        self.models = {
-            "gpt-3.5-turbo": {
-                "api_key": os.getenv('OPENAI_API_KEY'),
-                "base_url": "https://api.openai.com/v1/chat/completions"
-            },
-            "claude": {
-                "api_key": os.getenv('ANTHROPIC_API_KEY'),
-                "base_url": "https://api.anthropic.com/v1/messages"
-            },
-            "deepseek": {
-                "api_key": os.getenv('DEEPSEEK_API_KEY'),
-                "base_url": "https://api.deepseek.com/v1/chat/completions"
-            }
-        }
+        self.api_key = os.getenv('DEEPSEEK_API_KEY')
+        self.base_url = "https://api.deepseek.com/v1/chat/completions"
         
-        # Initialize AgentQL integration if available
-        self.agentql_enabled = False
-        if AGENTQL_AVAILABLE:
-            try:
-                self.enhanced_chat = EnhancedAIChat()
-                self.agentql_enabled = True
-            except Exception as e:
-                logging.error(f"Failed to initialize AgentQL: {str(e)}")
+        logger.info(f"DeepSeek API Key: {'SET' if self.api_key else 'NOT_SET'}")
         
-    def chat_with_model(self, message: str, model_name: str = "gpt-3.5-turbo", 
-                       conversation_history: List[Dict] = []) -> Dict:
-        if model_name not in self.models:
-            return {"success": False, "error": f"Model {model_name} not supported"}
-            
-        model_config = self.models[model_name]
-        
-        # Get base AI response
-        if model_name == "gpt-3.5-turbo":
-            result = self._call_openai(message, conversation_history, model_config)
-        elif model_name == "claude":
-            result = self._call_anthropic(message, conversation_history, model_config)
-        elif model_name == "deepseek":
-            result = self._call_deepseek(message, conversation_history, model_config)
-        
-        # Enhance response with AgentQL if enabled and applicable
-        if result["success"] and self.agentql_enabled and self._should_enhance_with_agentql(message):
-            try:
-                enhanced_response = self.enhanced_chat.enhance_response_with_web_data(
-                    message, result["response"]
-                )
-                result["response"] = enhanced_response
-                result["agentql_enhanced"] = True
-            except Exception as e:
-                logging.error(f"AgentQL enhancement failed: {str(e)}")
-                result["agentql_enhanced"] = False
-        
-        return result
-    
-    def _should_enhance_with_agentql(self, message: str) -> bool:
-        """Determine if message should be enhanced with AgentQL"""
-        if not self.agentql_enabled:
-            return False
-        
-        # Check if message contains real-time keywords
-        real_time_keywords = [
-            'weather', 'stock', 'price', 'news', 'crypto', 'bitcoin',
-            'weather', 'temperature', 'forecast', 'market', 'trading',
-            'latest', 'recent', 'current', 'today', 'now', '实时',
-            '天气', '股票', '价格', '新闻', '加密货币', '比特币',
-            '最新', '当前', '今天', '现在'
-        ]
-        
-        message_lower = message.lower()
-        return any(keyword in message_lower for keyword in real_time_keywords)
-            
-    def _call_openai(self, message: str, conversation_history: List[Dict], config: Dict) -> Dict:
-        if not config['api_key']:
-            return {"success": False, "error": "OpenAI API key not configured"}
-            
-        headers = {
-            "Authorization": f"Bearer {config['api_key']}",
-            "Content-Type": "application/json"
-        }
-        
-        messages = conversation_history + [{"role": "user", "content": message}]
-        
-        data = {
-            "model": "gpt-3.5-turbo",
-            "messages": messages,
-            "max_tokens": 1000,
-            "temperature": 0.7
-        }
-        
-        try:
-            response = requests.post(config['base_url'], headers=headers, json=data, timeout=30)
-            response.raise_for_status()
-            
-            result = response.json()
-            return {
-                "success": True,
-                "response": result['choices'][0]['message']['content'],
-                "usage": result.get('usage', {}),
-                "model": "gpt-3.5-turbo"
-            }
-        except requests.exceptions.RequestException as e:
-            return {"success": False, "error": f"OpenAI API error: {str(e)}"}
-        except Exception as e:
-            return {"success": False, "error": f"Unexpected error: {str(e)}"}
-    
-    def _call_anthropic(self, message: str, conversation_history: List[Dict], config: Dict) -> Dict:
-        if not config['api_key']:
-            return {"success": False, "error": "Anthropic API key not configured"}
-            
-        headers = {
-            "x-api-key": config['api_key'],
-            "Content-Type": "application/json",
-            "anthropic-version": "2023-06-01"
-        }
-        
-        # 构建Claude格式的消息
-        messages = []
-        for msg in conversation_history:
-            messages.append({"role": msg["role"], "content": msg["content"]})
-        messages.append({"role": "user", "content": message})
-        
-        data = {
-            "model": "claude-3-sonnet-20240229",
-            "max_tokens": 1000,
-            "messages": messages
-        }
-        
-        try:
-            response = requests.post(config['base_url'], headers=headers, json=data, timeout=30)
-            response.raise_for_status()
-            
-            result = response.json()
-            return {
-                "success": True,
-                "response": result['content'][0]['text'],
-                "usage": result.get('usage', {}),
-                "model": "claude"
-            }
-        except requests.exceptions.RequestException as e:
-            return {"success": False, "error": f"Anthropic API error: {str(e)}"}
-        except Exception as e:
-            return {"success": False, "error": f"Unexpected error: {str(e)}"}
-    
-    def _call_deepseek(self, message: str, conversation_history: List[Dict], config: Dict) -> Dict:
-        if not config['api_key']:
+    def chat(self, message: str, conversation_history: List[Dict] = []) -> Dict:
+        if not self.api_key:
             return {"success": False, "error": "DeepSeek API key not configured"}
             
         headers = {
-            "Authorization": f"Bearer {config['api_key']}",
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
         
@@ -182,9 +40,15 @@ class MCPClient:
             "temperature": 0.7
         }
         
+        logger.info(f"Calling DeepSeek API with message: {message[:50]}...")
+        
         try:
-            response = requests.post(config['base_url'], headers=headers, json=data, timeout=30)
-            response.raise_for_status()
+            response = requests.post(self.base_url, headers=headers, json=data, timeout=30)
+            logger.info(f"DeepSeek response status: {response.status_code}")
+            
+            if response.status_code != 200:
+                logger.error(f"DeepSeek API error: {response.status_code} - {response.text}")
+                return {"success": False, "error": f"DeepSeek API error: {response.status_code}"}
             
             result = response.json()
             return {
@@ -194,8 +58,10 @@ class MCPClient:
                 "model": "deepseek"
             }
         except requests.exceptions.RequestException as e:
+            logger.error(f"DeepSeek request error: {str(e)}")
             return {"success": False, "error": f"DeepSeek API error: {str(e)}"}
         except Exception as e:
+            logger.error(f"DeepSeek unexpected error: {str(e)}")
             return {"success": False, "error": f"Unexpected error: {str(e)}"}
 
 class SessionManager:
@@ -207,7 +73,6 @@ class SessionManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # 创建会话表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS sessions (
                 session_id TEXT PRIMARY KEY,
@@ -216,7 +81,6 @@ class SessionManager:
             )
         ''')
         
-        # 创建消息表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -280,42 +144,40 @@ class SessionManager:
         
         conn.close()
         return messages
-    
-    def cleanup_old_sessions(self, days: int = 7):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute(
-            "DELETE FROM sessions WHERE last_activity < datetime('now', '-{} days')".format(days)
-        )
-        
-        conn.commit()
-        conn.close()
 
 # CGI处理
 def main():
+    logger.info("=== CGI Script Started ===")
+    logger.info(f"CONTENT_LENGTH: {os.environ.get('CONTENT_LENGTH', 'NOT_SET')}")
+    logger.info(f"REQUEST_METHOD: {os.environ.get('REQUEST_METHOD', 'NOT_SET')}")
+    
     print("Content-Type: application/json")
     print()
     
     try:
         # 读取POST数据
         content_length = int(os.environ.get('CONTENT_LENGTH', 0))
+        logger.info(f"Content length: {content_length}")
+        
         if content_length > 0:
             post_data = sys.stdin.read(content_length)
+            logger.info(f"Post data: {post_data[:100]}...")
             request_data = json.loads(post_data)
         else:
             request_data = {}
         
-        # 获取用户消息和模型选择
+        # 获取用户消息和会话ID
         user_message = request_data.get('message', '')
-        model_name = request_data.get('model', 'gpt-3.5-turbo')
         session_id = request_data.get('session_id', None)
+        
+        logger.info(f"User message: {user_message}")
+        logger.info(f"Session ID: {session_id}")
         
         if not user_message:
             raise ValueError("No message provided")
         
-        # 创建MCP客户端
-        mcp_client = MCPClient()
+        # 创建DeepSeek客户端
+        deepseek_client = DeepSeekClient()
         
         # 创建会话管理器
         session_manager = SessionManager()
@@ -331,7 +193,7 @@ def main():
         session_manager.add_message(session_id, "user", user_message)
         
         # 调用AI
-        result = mcp_client.chat_with_model(user_message, model_name, conversation_history)
+        result = deepseek_client.chat(user_message, conversation_history)
         
         if result["success"]:
             # 添加AI回复到历史
@@ -342,27 +204,29 @@ def main():
             "success": result["success"],
             "response": result.get("response", "Sorry, I couldn't process your request."),
             "usage": result.get("usage", {}),
-            "model": result.get("model", model_name),
-            "session_id": session_id,
-            "agentql_enabled": mcp_client.agentql_enabled,
-            "agentql_enhanced": result.get("agentql_enhanced", False)
+            "model": result.get("model", "deepseek"),
+            "session_id": session_id
         }
         
+        logger.info("=== CGI Script Completed Successfully ===")
         print(json.dumps(response))
         
     except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
         error_response = {
             "success": False,
             "error": f"Invalid JSON: {str(e)}"
         }
         print(json.dumps(error_response))
     except ValueError as e:
+        logger.error(f"Value error: {str(e)}")
         error_response = {
             "success": False,
             "error": str(e)
         }
         print(json.dumps(error_response))
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
         error_response = {
             "success": False,
             "error": f"Unexpected error: {str(e)}"

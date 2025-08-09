@@ -1,4 +1,4 @@
-# AI Chat Configuration
+# AI聊天配置
 ai_models:
   gpt-3.5-turbo:
     enabled: true
@@ -21,12 +21,10 @@ ai_models:
     temperature: 0.7
     timeout: 30
 
-# AgentQL MCP Integration
+# AgentQL配置 - 模拟模式
 agentql:
   enabled: true
-  # Uses official npm package: agentql-mcp
-  # Installation: npm install -g agentql-mcp
-  # GitHub: https://github.com/tinyfish-io/agentql-mcp.git
+  mode: "mock"  # 模拟模式，无需API密钥
   api_key_env: "AGENTQL_API_KEY"
   timeout: 60
   features:

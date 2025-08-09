@@ -2,6 +2,9 @@
 
 #include <mysql/mysql.h>
 #include <fstream>
+#include <string>
+#include <unistd.h>
+#include <sys/wait.h>
 
 //定义http响应的一些状态信息
 const char *ok_200_title = "OK";
@@ -391,6 +394,106 @@ http_conn::HTTP_CODE http_conn::do_request()
     int len = strlen(doc_root);
     //printf("m_url:%s\n", m_url);
     const char *p = strrchr(m_url, '/');
+
+    // 处理CGI请求
+    if (strncmp(m_url, "/cgi/", 5) == 0)
+    {
+        // 构建CGI脚本路径
+        char cgi_path[FILENAME_LEN];
+        strcpy(cgi_path, doc_root);
+        strcat(cgi_path, m_url);
+        
+        // 检查CGI脚本是否存在
+        if (access(cgi_path, F_OK) == -1)
+        {
+            return NO_RESOURCE;
+        }
+        
+        // 检查CGI脚本是否可执行
+        if (access(cgi_path, X_OK) == -1)
+        {
+            return FORBIDDEN_REQUEST;
+        }
+        
+        // 设置CGI环境变量
+        char content_length_str[32];
+        sprintf(content_length_str, "%d", m_content_length);
+        
+        // 创建子进程执行CGI
+        int pipefd[2];
+        if (pipe(pipefd) == -1)
+        {
+            return INTERNAL_ERROR;
+        }
+        
+        pid_t pid = fork();
+        if (pid == -1)
+        {
+            close(pipefd[0]);
+            close(pipefd[1]);
+            return INTERNAL_ERROR;
+        }
+        
+        if (pid == 0)  // 子进程
+        {
+            close(pipefd[0]);
+            
+            // 重定向stdout到管道
+            dup2(pipefd[1], STDOUT_FILENO);
+            close(pipefd[1]);
+            
+            // 重定向stdin
+            if (m_content_length > 0)
+            {
+                int temp_pipe[2];
+                if (pipe(temp_pipe) == 0)
+                {
+                    write(temp_pipe[1], m_string, m_content_length);
+                    close(temp_pipe[1]);
+                    dup2(temp_pipe[0], STDIN_FILENO);
+                    close(temp_pipe[0]);
+                }
+            }
+            
+            // 设置环境变量
+            setenv("CONTENT_LENGTH", content_length_str, 1);
+            setenv("REQUEST_METHOD", "POST", 1);
+            setenv("QUERY_STRING", "", 1);
+            setenv("SCRIPT_NAME", m_url, 1);
+            setenv("PATH_INFO", m_url, 1);
+            setenv("DEEPSEEK_API_KEY", "sk-7d3a5f1e93184ef8a00ab4e8c6fa6677", 1);
+            
+            // 执行CGI脚本
+            execl(cgi_path, cgi_path, NULL);
+            exit(1);
+        }
+        else  // 父进程
+        {
+            close(pipefd[1]);
+            
+            // 读取CGI输出
+            char buffer[4096];
+            int bytes_read;
+            std::string cgi_output;
+            
+            while ((bytes_read = read(pipefd[0], buffer, sizeof(buffer))) > 0)
+            {
+                cgi_output.append(buffer, bytes_read);
+            }
+            close(pipefd[0]);
+            
+            // 等待子进程结束
+            int status;
+            waitpid(pid, &status, 0);
+            
+            // 返回CGI输出
+            m_file_address = (char *)malloc(cgi_output.length() + 1);
+            strcpy(m_file_address, cgi_output.c_str());
+            m_file_stat.st_size = cgi_output.length();
+            
+            return FILE_REQUEST;
+        }
+    }
 
     //处理cgi
     if (cgi == 1 && (*(p + 1) == '2' || *(p + 1) == '3'))

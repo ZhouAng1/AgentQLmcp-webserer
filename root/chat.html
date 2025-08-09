@@ -1,346 +1,432 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>AI Chat Assistant</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 聊天助手 - DeepSeek</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
-        
+
         .chat-container {
-            max-width: 900px;
-            margin: 0 auto;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
         }
-        
+
         .chat-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
             text-align: center;
+            position: relative;
         }
-        
-        .agentql-status {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin: 10px 20px;
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
             font-size: 14px;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            font-size: 12px;
         }
-        
-        .agentql-status.enabled {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
         }
-        
-        .agentql-status.disabled {
-            background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
-        
-        .chat-header h1 {
-            margin: 0;
-            font-size: 24px;
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
         }
-        
-        .model-selector {
-            margin-top: 10px;
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: fadeIn 0.3s ease-in;
         }
-        
-        .model-selector select {
-            padding: 8px 12px;
-            border: none;
-            border-radius: 5px;
-            background: rgba(255,255,255,0.2);
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
             color: white;
-            font-size: 14px;
+            flex-shrink: 0;
         }
-        
-        .model-selector select option {
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .message.assistant .message-avatar {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .message-content {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 18px;
+            max-width: 70%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            line-height: 1.5;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.assistant .message-content {
             background: white;
             color: #333;
         }
-        
-        .chat-messages {
-            height: 500px;
-            overflow-y: auto;
-            padding: 20px;
-            background: #f8f9fa;
-        }
-        
-        .message {
-            margin: 15px 0;
-            padding: 15px;
-            border-radius: 10px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-        
-        .user-message {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            margin-left: auto;
-            text-align: right;
-        }
-        
-        .ai-message {
-            background: white;
-            border: 1px solid #e0e0e0;
-            margin-right: auto;
-        }
-        
-        .ai-message .model-tag {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .input-area {
+
+        .chat-input-container {
             padding: 20px;
             background: white;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid #e9ecef;
         }
-        
-        .input-container {
+
+        .chat-input-wrapper {
             display: flex;
             gap: 10px;
+            align-items: flex-end;
         }
-        
-        #messageInput {
+
+        .chat-input {
             flex: 1;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            padding: 15px 20px;
             font-size: 16px;
             outline: none;
-            transition: border-color 0.3s;
+            transition: border-color 0.3s ease;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
         }
-        
-        #messageInput:focus {
+
+        .chat-input:focus {
             border-color: #667eea;
         }
-        
-        #sendButton {
-            padding: 12px 24px;
+
+        .send-button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
             cursor: pointer;
-            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
         }
-        
-        #sendButton:hover {
-            transform: translateY(-2px);
+
+        .send-button:hover {
+            transform: scale(1.05);
         }
-        
-        #sendButton:disabled {
+
+        .send-button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
         }
-        
+
         .loading {
             display: none;
-            text-align: center;
-            padding: 20px;
+            align-items: center;
+            gap: 10px;
             color: #666;
+            font-size: 14px;
         }
-        
-        .loading .spinner {
-            display: inline-block;
+
+        .loading-spinner {
             width: 20px;
             height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
+
         .error-message {
             background: #ffebee;
             color: #c62828;
-            padding: 10px;
-            border-radius: 5px;
+            padding: 10px 15px;
+            border-radius: 8px;
             margin: 10px 0;
-            text-align: center;
+            border-left: 4px solid #c62828;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                height: 90vh;
+                margin: 10px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            <h1>🤖 AI Chat Assistant</h1>
-            <div class="model-selector">
-                <select id="modelSelect">
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                    <option value="claude">Claude</option>
-                    <option value="deepseek">DeepSeek</option>
-                </select>
+            <h1>🤖 AI 聊天助手</h1>
+            <p>基于 DeepSeek 的智能对话系统</p>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>DeepSeek 在线</span>
             </div>
         </div>
-        <div id="agentqlStatus" class="agentql-status">
-            <span id="agentqlIcon">🔍</span>
-            <span id="agentqlText">AgentQL: 检查中...</span>
-        </div>
-        
+
         <div class="chat-messages" id="chatMessages">
-            <div class="message ai-message">
-                <div class="model-tag">AI Assistant</div>
-                Hello! I'm your AI assistant. How can I help you today? You can ask me anything - from coding questions to creative writing, or just have a casual conversation!
+            <div class="message assistant">
+                <div class="message-avatar">AI</div>
+                <div class="message-content">
+                    你好！我是基于 DeepSeek 的 AI 助手。我可以帮助你回答问题、编写代码、分析问题等。请告诉我你需要什么帮助！
+                </div>
             </div>
         </div>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <div>AI is thinking...</div>
-        </div>
-        
-        <div class="input-area">
-            <div class="input-container">
-                <input type="text" id="messageInput" placeholder="Type your message here..." autocomplete="off">
-                <button id="sendButton">Send</button>
+
+        <div class="chat-input-container">
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <span>AI 正在思考中...</span>
+            </div>
+            
+            <div class="error-message" id="errorMessage" style="display: none;"></div>
+            
+            <div class="typing-indicator" id="typingIndicator">
+                <span>AI 正在输入</span>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+
+            <div class="chat-input-wrapper">
+                <textarea 
+                    id="messageInput" 
+                    class="chat-input" 
+                    placeholder="输入你的问题..."
+                    rows="1"
+                ></textarea>
+                <button id="sendButton" class="send-button">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
-    
+
     <script>
         let sessionId = null;
-        
-        // 初始化会话
-        function initSession() {
-            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        }
-        
-        // 页面加载时初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            initSession();
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        // 自动调整输入框高度
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
         });
+
+        // 发送消息
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // 禁用输入和按钮
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+            loading.style.display = 'flex';
+            errorMessage.style.display = 'none';
+
+            // 添加用户消息
+            addMessage(message, 'user');
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            try {
+                const response = await fetch('/cgi/ai_chat.py', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: sessionId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    sessionId = data.session_id;
+                    addMessage(data.response, 'assistant');
+                } else {
+                    throw new Error(data.error || '未知错误');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`发送失败: ${error.message}`);
+            } finally {
+                // 恢复输入和按钮
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                loading.style.display = 'none';
+                messageInput.focus();
+            }
+        }
+
+        // 添加消息到聊天界面
+        function addMessage(content, role) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? '你' : 'AI';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.textContent = content;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // 事件监听器
+        sendButton.addEventListener('click', sendMessage);
         
-        // 发送消息事件
-        document.getElementById('sendButton').addEventListener('click', sendMessage);
-        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+        messageInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
             }
         });
-        
-        function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const message = input.value.trim();
-            if (!message) return;
-            
-            const sendButton = document.getElementById('sendButton');
-            const loading = document.getElementById('loading');
-            
-            // 禁用输入和按钮
-            input.disabled = true;
-            sendButton.disabled = true;
-            loading.style.display = 'block';
-            
-            // 添加用户消息
-            addMessage(message, 'user');
-            input.value = '';
-            
-            // 获取选择的模型
-            const selectedModel = document.getElementById('modelSelect').value;
-            
-            // 发送到服务器
-            fetch('/cgi/ai_chat.py', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    message: message,
-                    model: selectedModel,
-                    session_id: sessionId
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // 更新AgentQL状态
-                    updateAgentQLStatus(data.agentql_enabled, data.agentql_enhanced);
-                    
-                    // 添加AI回复
-                    let modelDisplay = data.model;
-                    if (data.agentql_enhanced) {
-                        modelDisplay += ' + AgentQL';
-                    }
-                    addMessage(data.response, 'ai', modelDisplay);
-                } else {
-                    addMessage('Sorry, I encountered an error: ' + (data.error || 'Unknown error'), 'ai');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                addMessage('Sorry, I encountered a network error. Please check your connection and try again.', 'ai');
-            })
-            .finally(() => {
-                // 重新启用输入和按钮
-                input.disabled = false;
-                sendButton.disabled = false;
-                loading.style.display = 'none';
-                input.focus();
-            });
-        }
-        
-        function updateAgentQLStatus(enabled, enhanced) {
-            const statusDiv = document.getElementById('agentqlStatus');
-            const iconSpan = document.getElementById('agentqlIcon');
-            const textSpan = document.getElementById('agentqlText');
-            
-            if (enabled) {
-                statusDiv.className = 'agentql-status enabled';
-                iconSpan.textContent = enhanced ? '🚀' : '🔍';
-                textSpan.textContent = enhanced ? 
-                    'AgentQL: 已启用 (实时数据增强)' : 
-                    'AgentQL: 已启用 (等待实时查询)';
-            } else {
-                statusDiv.className = 'agentql-status disabled';
-                iconSpan.textContent = '❌';
-                textSpan.textContent = 'AgentQL: 未启用';
-            }
-        }
-        
-        function addMessage(text, sender, model = null) {
-            const messages = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}-message`;
-            
-            if (sender === 'ai' && model) {
-                messageDiv.innerHTML = `<div class="model-tag">${model.toUpperCase()}</div>${text}`;
-            } else {
-                messageDiv.textContent = text;
-            }
-            
-            messages.appendChild(messageDiv);
-            messages.scrollTop = messages.scrollHeight;
-        }
-        
-        // 自动聚焦到输入框
-        document.getElementById('messageInput').focus();
+
+        // 初始化焦点
+        messageInput.focus();
     </script>
 </body>
 </html> 
