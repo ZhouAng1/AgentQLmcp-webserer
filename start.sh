@@ -38,10 +38,33 @@ make
 
 if [ ! -f "server" ]; then
     echo "❌ 编译失败！"
+    echo "请检查错误信息并修复"
     exit 1
 fi
 
 echo "✅ 编译成功！"
+
+# 检查MySQL服务
+echo "🔍 检查MySQL服务..."
+if ! systemctl is-active --quiet mysql; then
+    echo "⚠️  MySQL服务未运行，尝试启动..."
+    sudo systemctl start mysql
+    sleep 3
+fi
+
+# 检查MySQL连接
+echo "🔍 检查MySQL连接..."
+mysql -u root -proot -e "SELECT 1;" 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "⚠️  MySQL连接失败，尝试修复..."
+    echo "请在MySQL中执行以下命令："
+    echo "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';"
+    echo "FLUSH PRIVILEGES;"
+    echo "然后重新运行此脚本"
+    exit 1
+fi
+
+echo "✅ MySQL连接正常"
 
 # 启动服务器
 echo "🚀 启动服务器..."
@@ -51,5 +74,5 @@ echo ""
 echo "按 Ctrl+C 停止服务器"
 echo "=================================="
 
-# 启动服务器
-./server 
+# 启动服务器并保持终端打开
+exec ./server 

@@ -12,7 +12,14 @@ import logging
 from typing import Dict, List, Optional
 
 # 设置日志
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('ai_chat.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 class DeepSeekClient:
@@ -21,9 +28,12 @@ class DeepSeekClient:
         self.base_url = "https://api.deepseek.com/v1/chat/completions"
         
         logger.info(f"DeepSeek API Key: {'SET' if self.api_key else 'NOT_SET'}")
+        if self.api_key:
+            logger.info(f"API Key prefix: {self.api_key[:10]}...")
         
     def chat(self, message: str, conversation_history: List[Dict] = []) -> Dict:
         if not self.api_key:
+            logger.error("DeepSeek API key not configured")
             return {"success": False, "error": "DeepSeek API key not configured"}
             
         headers = {
@@ -51,9 +61,12 @@ class DeepSeekClient:
                 return {"success": False, "error": f"DeepSeek API error: {response.status_code}"}
             
             result = response.json()
+            response_text = result['choices'][0]['message']['content']
+            logger.info(f"DeepSeek response: {response_text[:100]}...")
+            
             return {
                 "success": True,
-                "response": result['choices'][0]['message']['content'],
+                "response": response_text,
                 "usage": result.get('usage', {}),
                 "model": "deepseek"
             }
@@ -70,107 +83,121 @@ class SessionManager:
         self.init_database()
     
     def init_database(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sessions (
-                session_id TEXT PRIMARY KEY,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT,
-                role TEXT,
-                content TEXT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (session_id) REFERENCES sessions (session_id)
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS sessions (
+                    session_id TEXT PRIMARY KEY,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT,
+                    role TEXT,
+                    content TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (session_id) REFERENCES sessions (session_id)
+                )
+            ''')
+            
+            conn.commit()
+            conn.close()
+            logger.info("Database initialized successfully")
+        except Exception as e:
+            logger.error(f"Database initialization error: {str(e)}")
     
     def create_session(self) -> str:
         session_id = str(uuid.uuid4())
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute(
-            "INSERT INTO sessions (session_id) VALUES (?)",
-            (session_id,)
-        )
-        
-        conn.commit()
-        conn.close()
-        return session_id
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO sessions (session_id) VALUES (?)",
+                (session_id,)
+            )
+            conn.commit()
+            conn.close()
+            logger.info(f"Created new session: {session_id}")
+            return session_id
+        except Exception as e:
+            logger.error(f"Session creation error: {str(e)}")
+            return session_id
     
     def add_message(self, session_id: str, role: str, content: str):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute(
-            "INSERT INTO messages (session_id, role, content) VALUES (?, ?, ?)",
-            (session_id, role, content)
-        )
-        
-        cursor.execute(
-            "UPDATE sessions SET last_activity = CURRENT_TIMESTAMP WHERE session_id = ?",
-            (session_id,)
-        )
-        
-        conn.commit()
-        conn.close()
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO messages (session_id, role, content) VALUES (?, ?, ?)",
+                (session_id, role, content)
+            )
+            cursor.execute(
+                "UPDATE sessions SET last_activity = CURRENT_TIMESTAMP WHERE session_id = ?",
+                (session_id,)
+            )
+            conn.commit()
+            conn.close()
+            logger.info(f"Added message to session {session_id}")
+        except Exception as e:
+            logger.error(f"Message addition error: {str(e)}")
     
     def get_conversation_history(self, session_id: str) -> List[Dict]:
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute(
-            "SELECT role, content FROM messages WHERE session_id = ? ORDER BY timestamp",
-            (session_id,)
-        )
-        
-        messages = []
-        for row in cursor.fetchall():
-            messages.append({
-                "role": row[0],
-                "content": row[1]
-            })
-        
-        conn.close()
-        return messages
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT role, content FROM messages WHERE session_id = ? ORDER BY timestamp",
+                (session_id,)
+            )
+            messages = []
+            for row in cursor.fetchall():
+                messages.append({
+                    "role": row[0],
+                    "content": row[1]
+                })
+            conn.close()
+            logger.info(f"Retrieved {len(messages)} messages for session {session_id}")
+            return messages
+        except Exception as e:
+            logger.error(f"History retrieval error: {str(e)}")
+            return []
 
-# CGI处理
 def main():
-    logger.info("=== CGI Script Started ===")
-    logger.info(f"CONTENT_LENGTH: {os.environ.get('CONTENT_LENGTH', 'NOT_SET')}")
-    logger.info(f"REQUEST_METHOD: {os.environ.get('REQUEST_METHOD', 'NOT_SET')}")
-    
     print("Content-Type: application/json")
     print()
     
     try:
+        # 记录环境变量
+        logger.info("=== CGI Request Started ===")
+        logger.info(f"CONTENT_LENGTH: {os.environ.get('CONTENT_LENGTH', 'NOT_SET')}")
+        logger.info(f"REQUEST_METHOD: {os.environ.get('REQUEST_METHOD', 'NOT_SET')}")
+        logger.info(f"DEEPSEEK_API_KEY: {'SET' if os.environ.get('DEEPSEEK_API_KEY') else 'NOT_SET'}")
+        
         # 读取POST数据
         content_length = int(os.environ.get('CONTENT_LENGTH', 0))
         logger.info(f"Content length: {content_length}")
         
         if content_length > 0:
             post_data = sys.stdin.read(content_length)
-            logger.info(f"Post data: {post_data[:100]}...")
+            logger.info(f"Raw POST data: {post_data}")
             request_data = json.loads(post_data)
         else:
             request_data = {}
+            logger.warning("No POST data received")
         
-        # 获取用户消息和会话ID
+        # 获取用户消息和模型选择
         user_message = request_data.get('message', '')
+        model_name = request_data.get('model', 'deepseek')
         session_id = request_data.get('session_id', None)
         
         logger.info(f"User message: {user_message}")
+        logger.info(f"Model: {model_name}")
         logger.info(f"Session ID: {session_id}")
         
         if not user_message:
@@ -198,18 +225,24 @@ def main():
         if result["success"]:
             # 添加AI回复到历史
             session_manager.add_message(session_id, "assistant", result["response"])
+            
+            # 返回结果
+            response = {
+                "success": result["success"],
+                "response": result.get("response", "Sorry, I couldn't process your request."),
+                "usage": result.get("usage", {}),
+                "model": result.get("model", model_name),
+                "session_id": session_id
+            }
+        else:
+            response = {
+                "success": False,
+                "error": result.get("error", "Unknown error"),
+                "session_id": session_id
+            }
         
-        # 返回结果
-        response = {
-            "success": result["success"],
-            "response": result.get("response", "Sorry, I couldn't process your request."),
-            "usage": result.get("usage", {}),
-            "model": result.get("model", "deepseek"),
-            "session_id": session_id
-        }
-        
-        logger.info("=== CGI Script Completed Successfully ===")
-        print(json.dumps(response))
+        logger.info(f"Response: {json.dumps(response, ensure_ascii=False)}")
+        print(json.dumps(response, ensure_ascii=False))
         
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error: {str(e)}")
@@ -232,6 +265,8 @@ def main():
             "error": f"Unexpected error: {str(e)}"
         }
         print(json.dumps(error_response))
+    
+    logger.info("=== CGI Request Ended ===")
 
 if __name__ == "__main__":
     main() 
