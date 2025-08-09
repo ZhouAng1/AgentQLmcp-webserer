@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CGI Test</title>
+</head>
+<body>
+    <h1>CGI Test</h1>
+    <input type="text" id="message" placeholder="输入消息">
+    <button onclick="testCGI()">测试CGI</button>
+    <div id="result"></div>
+
+    <script>
+        async function testCGI() {
+            const message = document.getElementById('message').value;
+            const result = document.getElementById('result');
+            
+            try {
+                const response = await fetch('/cgi/test_cgi.py', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message
+                    })
+                });
+                
+                const data = await response.json();
+                result.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">错误: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html> 
